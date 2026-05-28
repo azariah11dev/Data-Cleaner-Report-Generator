@@ -28,6 +28,7 @@ This project demonstrates practical data‑processing workflows commonly used in
 ---
 
 ## Project Structure
+```bash
 data-cleaner/
 │
 ├── data/
@@ -44,9 +45,7 @@ data-cleaner/
 │
 ├── requirements.txt
 └── README.md
-
-Code
-
+```
 ---
 
 ## Example Workflow
@@ -86,7 +85,7 @@ Code
 
 Clone the repository:
 ```bash
-git clone https://github.com/yourusername/data-cleaner.git
+git clone https://github.com/azariah11dev/Data-Cleaner-Report-Generator.git
 cd data-cleaner
 Install dependencies:
 

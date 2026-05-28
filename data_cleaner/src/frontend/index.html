@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="eng">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document Cleaner</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="connector.js" defer></script>
+</head>
+
+<body>
+    <div class="upload-container container">
+        <input class="upload-box" type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+        <button id="upload-btn">Upload</button>
+    </div>
+    <div class="clean-upload container">
+        <label for="strategy">Select Strategy for Cleaning File</label>
+        <select id="strategy">
+            <option value="drop">Drop Rows</option>
+            <option value="mean">Mean</option>
+            <option value="median">Median</option>
+            <option value="mode">Mode</option>
+            <option value="constant">Constant Value</option>
+            <option value="ffill">Forward Fill</option>
+            <option value="bfill">Backward Fill</option>
+        </select>
+        <span>Type in columns you want modified</span>
+        <input class="input-sub" id="columns" type="text" placeholder="column 1 , column 2 , column 3">
+        <span>Type in the value you want entered in the columns</span>
+        <input class="input-sub" id="fill-value" type="text" placeholder="fill in value">
+        <button id="apply-btn">Apply</button>
+        <div id="display"> </div>
+    </div>
+</body>
+
+</html>
