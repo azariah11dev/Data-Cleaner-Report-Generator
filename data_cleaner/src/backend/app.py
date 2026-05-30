@@ -33,10 +33,15 @@ def root():
         "health_check": "/health",
         "available_endpoints": {
             "DELETE": [
-                ["/delete/filename(this is the name of what ever file you uploaded)"]
+                ["/delete/target"]
             ],
             "POST": [
-                ["/cleaner/upload"]
+                ["/cleaner/upload"],
+                ["/cleaner/clean"]
+            ],
+            "GET": [
+                ["/live-update/preview?file_name=filename(this is the name of what ever file you uploaded)"],
+                ["/live-update/download?file_path=path_to_file"]
             ]
         }
     }

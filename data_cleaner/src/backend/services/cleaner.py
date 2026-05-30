@@ -1,165 +1,184 @@
 import pandas as pd
+import numpy as np
 import os
-from typing import Any
+from typing import Any, Dict, List
 
 
 class SheetCleaner:
     def __init__(self, file_name: str, file_path: str):
         self.file_name = file_name
-        self.file_path = file_path  # router provides the real path
-        self.data = None
-        self.file_storage = None  # set after detecting file type
+        self.file_path = file_path
+        self.data: pd.DataFrame | None = None
 
         # Resolve backend root
         self.services_dir = os.path.dirname(os.path.abspath(__file__))
         self.backend_dir = os.path.dirname(self.services_dir)
 
+        # Will be set after load
+        self.file_storage = None
+
     # ---------------------------------------------------------
-    # LOAD (CSV + Excel)
+    # LOAD
     # ---------------------------------------------------------
     def load_data(self):
-        """Load CSV or Excel file into a DataFrame."""
-        try:
-            ext = os.path.splitext(self.file_name)[1].lower()
+        ext = os.path.splitext(self.file_name)[1].lower()
 
-            if ext == ".csv":
-                self.data = pd.read_csv(self.file_path)
-                self.file_storage = "save_csv"
+        if ext == ".csv":
+            df = pd.read_csv(self.file_path)
+            self.file_storage = "save_csv"
 
-            elif ext in [".xlsx", ".xls"]:
-                self.data = pd.read_excel(self.file_path)
-                self.file_storage = "save_excel"
+        elif ext in [".xlsx", ".xls"]:
+            df = pd.read_excel(self.file_path)
+            self.file_storage = "save_excel"
 
-            else:
-                raise ValueError(f"Unsupported file type: {ext}")
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
 
-            self.normalize_columns()
-
-        except FileNotFoundError:
-            raise FileNotFoundError(f"File not found: {self.file_path}")
-        except Exception as e:
-            raise Exception(f"Error loading data: {e}")
-
-    # ---------------------------------------------------------
-    # CLEANING STEPS
-    # ---------------------------------------------------------
-    def normalize_columns(self):
-        self.data.columns = (
-            self.data.columns
+        # Normalize columns
+        df.columns = (
+            df.columns
             .str.strip()
             .str.lower()
             .str.replace(" ", "_")
             .str.replace(r"[^a-zA-Z0-9_]", "", regex=True)
         )
 
+        self.data = df
+
+    # ---------------------------------------------------------
+    # MISSING VALUE HANDLING
+    # ---------------------------------------------------------
     def handle_missing(
         self,
         strategy: str,
-        columns: list | None = None,
-        fill_value=None
+        columns: List[str] | None = None,
+        fill_value: Any = None
     ):
-        """
-        Handle missing values in the dataset.
-
-        Parameters
-        ----------
-        strategy : str
-        Strategy to use:
-            - drop
-            - mean
-            - median
-            - mode
-            - constant
-            - ffill
-            - bfill
-
-        columns : list | None
-            Specific columns to apply strategy to. If None, all columns are used.
-
-        fill_value :
-            Value used for constant strategy.
-        """
+        if self.data is None:
+            raise ValueError("Data not loaded")
 
         df = self.data
 
-        # Use all columns if none specified
+        # Default to all columns
         if columns is None:
-            columns = df.columns
+            columns = df.columns.tolist()
+
+        # Remove empty column names (common UI bug)
+        columns = [c for c in columns if c and c.strip()]
+
+        if not columns:
+            raise ValueError("No valid columns provided")
 
         # Validate columns
-        invalid_cols = [col for col in columns if col not in df.columns]
-        if invalid_cols:
-            raise ValueError(f"Invalid columns: {invalid_cols}")
+        invalid = [c for c in columns if c not in df.columns]
+        if invalid:
+            raise ValueError(f"Invalid columns: {invalid}. Valid columns: {df.columns.tolist()}")
 
-        # DROP ROWS WITH MISSING VALUES
+        # STRATEGY: DROP
         if strategy == "drop":
-            df = df.dropna(subset=columns)
+            try:
+                df = df.dropna(subset=columns)
+            except Exception as e:
+                raise ValueError(f"Error applying DROP strategy: {e}")
 
-        # MEAN IMPUTATION
+        # STRATEGY: MEAN
         elif strategy == "mean":
-            for col in columns:
-                if pd.api.types.is_numeric_dtype(df[col]):
+            try:
+                for col in columns:
+                    if not pd.api.types.is_numeric_dtype(df[col]):
+                        raise ValueError(f"Column '{col}' is not numeric, cannot apply MEAN")
                     df[col] = df[col].fillna(df[col].mean())
+            except Exception as e:
+                raise ValueError(f"Error applying MEAN strategy: {e}")
 
-        # MEDIAN IMPUTATION
+        # STRATEGY: MEDIAN
         elif strategy == "median":
-            for col in columns:
-                if pd.api.types.is_numeric_dtype(df[col]):
+            try:
+                for col in columns:
+                    if not pd.api.types.is_numeric_dtype(df[col]):
+                        raise ValueError(f"Column '{col}' is not numeric, cannot apply MEDIAN")
                     df[col] = df[col].fillna(df[col].median())
+            except Exception as e:
+                raise ValueError(f"Error applying MEDIAN strategy: {e}")
 
-        # MODE IMPUTATION
+        # STRATEGY: MODE
         elif strategy == "mode":
-            for col in columns:
-                mode_value = df[col].mode()
-                if not mode_value.empty:
-                    df[col] = df[col].fillna(mode_value[0])
+            try:
+                for col in columns:
+                    mode_val = df[col].mode()
+                    if mode_val.empty:
+                        raise ValueError(f"Column '{col}' has no mode value")
+                    df[col] = df[col].fillna(mode_val[0])
+            except Exception as e:
+                raise ValueError(f"Error applying MODE strategy: {e}")
 
-        # CONSTANT VALUE IMPUTATION
+        # STRATEGY: CONSTANT
         elif strategy == "constant":
-            if fill_value is None:
-                raise ValueError("fill_value must be provided for constant strategy")
-            df[columns] = df[columns].fillna(fill_value)
+            try:
+                if fill_value is None:
+                    raise ValueError("fill_value must be provided for CONSTANT strategy")
+                df[columns] = df[columns].fillna(fill_value)
+            except Exception as e:
+                raise ValueError(f"Error applying CONSTANT strategy: {e}")
 
-        # FORWARD FILL
+        # STRATEGY: FORWARD FILL — use .ffill() directly (fillna(method=) removed in pandas 2.2+)
         elif strategy == "ffill":
-            df[columns] = df[columns].fillna(method="ffill")
+            try:
+                df[columns] = df[columns].ffill()
+            except Exception as e:
+                raise ValueError(f"Error applying FORWARD FILL (ffill): {e}")
 
-        # BACKWARD FILL
+        # STRATEGY: BACKWARD FILL — use .bfill() directly (fillna(method=) removed in pandas 2.2+)
         elif strategy == "bfill":
-            df[columns] = df[columns].fillna(method="bfill")
+            try:
+                df[columns] = df[columns].bfill()
+            except Exception as e:
+                raise ValueError(f"Error applying BACKWARD FILL (bfill): {e}")
 
         else:
             raise ValueError(f"Unsupported strategy: {strategy}")
 
         self.data = df
-        return self.data
 
-
+    # ---------------------------------------------------------
+    # DUPLICATES
+    # ---------------------------------------------------------
     def remove_duplicates(self):
+        if self.data is None:
+            raise ValueError("Data not loaded")
         self.data = self.data.drop_duplicates()
 
     # ---------------------------------------------------------
-    # STATS
+    # STATS (JSON SAFE)
     # ---------------------------------------------------------
-    def generate_stats(self):
+    def generate_stats(
+        self,
+        strategy: str,
+        missing_before: Dict[str, int],
+        missing_after: Dict[str, int],
+        rows_before: int,
+        rows_after: int,
+        fill_value: Any
+    ):
         return {
-            "shape": self.data.shape,
-            "columns": list(self.data.columns),
-            "missing": self.data.isna().sum().to_dict(),
-            "describe": self.data.describe(include="all").to_dict()
+            "strategy": strategy,
+            "missing_before": missing_before,
+            "missing_after": missing_after,
+            "rows_before": rows_before,
+            "rows_after": rows_after,
+            "fill_value": fill_value,
         }
 
     # ---------------------------------------------------------
     # SAVE
     # ---------------------------------------------------------
     def save_cleaned_data(self):
-        """Save cleaned data as CSV (Excel → CSV conversion)."""
+        if self.data is None:
+            raise ValueError("No cleaned data to save")
 
-        # Determine save directory based on file type
         save_dir = os.path.join(self.backend_dir, "models", self.file_storage)
         os.makedirs(save_dir, exist_ok=True)
 
-        # Always save as CSV
         output_name = (
             self.file_name
             .replace(".xlsx", ".csv")
@@ -167,22 +186,41 @@ class SheetCleaner:
         )
         output_path = os.path.join(save_dir, output_name)
 
-        if self.data is None:
-            raise ValueError("No cleaned data to save. Run the pipeline first.")
-
-        try:
-            self.data.to_csv(output_path, index=False)
-            return output_path
-        except Exception as e:
-            raise Exception(f"Error saving cleaned data: {e}")
+        self.data.to_csv(output_path, index=False)
+        return output_path
 
     # ---------------------------------------------------------
     # FULL PIPELINE
     # ---------------------------------------------------------
-    def run(self, fill_value : Any, columns: list, missing_strategy: str):
+    def run(self, fill_value: Any, columns: List[str], missing_strategy: str):
         self.load_data()
-        self.handle_missing(strategy=missing_strategy,
-                            columns=columns,
-                            fill_value=fill_value)
+
+        df = self.data
+        missing_before = df.isna().sum().to_dict()
+        rows_before = len(df)
+
+        # Normalize incoming column names
+        columns = [c.lower().strip() for c in columns]
+
+        self.handle_missing(
+            strategy=missing_strategy,
+            columns=columns,
+            fill_value=fill_value
+        )
+
         self.remove_duplicates()
-        return self.generate_stats()
+
+        df = self.data
+        missing_after = df.isna().sum().to_dict()
+        rows_after = len(df)
+
+        stats = self.generate_stats(
+            strategy=missing_strategy,
+            missing_before=missing_before,
+            missing_after=missing_after,
+            rows_before=rows_before,
+            rows_after=rows_after,
+            fill_value=fill_value
+        )
+
+        return stats

@@ -12,7 +12,11 @@
 <body>
     <div class="upload-container container">
         <input class="upload-box" type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
-        <button id="upload-btn">Upload</button>
+        <button id="upload-btn" type="button">Upload</button>
+    </div>
+    <div class="preview-original-document container">
+            <h2 style="text-align: center;">Original Document Preview</h2>
+            <div id="preview-container"></div>
     </div>
     <div class="clean-upload container">
         <label for="strategy">Select Strategy for Cleaning File</label>
@@ -29,8 +33,18 @@
         <input class="input-sub" id="columns" type="text" placeholder="column 1 , column 2 , column 3">
         <span>Type in the value you want entered in the columns</span>
         <input class="input-sub" id="fill-value" type="text" placeholder="fill in value">
-        <button id="apply-btn">Apply</button>
+        <button id="apply-btn" type="button">Apply</button>
         <div id="display"> </div>
+    </div>
+    <div class="clean-upload container">
+        <h2 style="text-align: center;">Modified Document Preview</h2>
+        <div id="stats-container"></div>
+    </div>
+    <div class="clean-upload container">
+        <button id="downloadBtn" type="button">Download Cleaned File</button>
+    </div>
+    <div class="clean-upload container">
+        <button id="deleteBtn" type="button">Delete Files</button>
     </div>
 </body>
 

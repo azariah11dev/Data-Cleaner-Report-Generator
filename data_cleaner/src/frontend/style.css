@@ -96,3 +96,25 @@ select {
     font-size: 16px;
     border: 1px solid #ccc;
 }
+
+.stats-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.stats-table th, .stats-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+}
+
+.stats-table th {
+    background: #f4f4f4;
+}
+
+.stats-wrapper {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+}

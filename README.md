@@ -1,148 +1,293 @@
-# Data Cleaner & Report Generator
+# Data Cleaner & Report Generator API
 
-A lightweight Python automation tool for cleaning messy CSV files, generating summary statistics, and exporting both a cleaned dataset and an HTML data report.
+A FastAPI-powered backend service that automates spreadsheet cleaning, validation, and export workflows.
 
-This project demonstrates practical data‑processing workflows commonly used in business analytics, operations, finance, and reporting automation.
+Designed for analysts, operations teams, finance professionals, and businesses that regularly work with CSV or Excel data.
+
+---
+
+## Overview
+
+The API provides a simple workflow:
+
+1. Upload a dataset
+2. Clean and standardize the data
+3. Preview results
+4. Download the cleaned file
+
+The service is designed to eliminate repetitive spreadsheet cleanup tasks and improve data quality before reporting or analytics.
 
 ---
 
 ## Features
-- Load CSV datasets from a file path  
-- Automatically handle missing values  
-- Normalize and standardize column names  
-- Remove duplicate records  
-- Generate summary statistics  
-- Export cleaned CSV files  
-- Create a simple HTML analytics report  
-- CLI‑based workflow (expandable to FastAPI)
+
+- CSV and Excel file support
+- Missing value handling
+- Duplicate removal
+- Column normalization
+- Data preview endpoints
+- Cleaned file export
+- RESTful API architecture
+- FastAPI validation and error handling
 
 ---
 
-## Tech Stack
-- **Python 3**
-- **pandas**
-- **NumPy**
-- **Jinja2** (optional, for HTML templating)
-- **FastAPI** (optional API version)
+## Base URL
 
----
-
-## Project Structure
-```bash
-data-cleaner/
-│
-├── data/
-│   ├── raw/
-│   └── cleaned/
-│
-├── reports/
-│   └── report.html
-│
-├── src/
-│   ├── cleaner.py
-│   ├── report_generator.py
-│   └── main.py
-│
-├── requirements.txt
-└── README.md
+```http
+http://localhost:8000
 ```
----
-
-## Example Workflow
-
-### Input CSV
-Name,Age,Salary
-John,29,50000
-Sarah,,62000
-Mike,35,
-
-Code
-
-### Automated Cleaning
-- Fill missing numeric values  
-- Normalize column names  
-- Remove duplicates  
-- Standardize formatting  
-
-### Output — Cleaned CSV
-name,age,salary
-John,29,50000
-Sarah,32,62000
-Mike,35,56000
-
-Code
-
-### HTML Report Includes
-- Dataset overview  
-- Missing value analysis  
-- Summary statistics  
-- Column information  
-- Basic visual insights  
 
 ---
 
-## Installation
+## Health Check
 
-Clone the repository:
-```bash
-git clone https://github.com/azariah11dev/Data-Cleaner-Report-Generator.git
-cd data-cleaner
+### Request
+
+```http
+GET /health
+```
+
+### Response
+
+```json
+{
+  "status": "healthy"
+}
+```
+
+---
+
+# API Workflow
+
+---
+
+## 1. Upload Dataset
+
+Upload a CSV or Excel file for processing.
+
+### Request
+
+```http
+POST /cleaner/upload
+```
+
+### Example Response
+
+```json
+{
+  "message": "File uploaded successfully",
+  "file_name": "sales_data.csv"
+}
+```
+
+---
+
+## 2. Clean Dataset
+
+Run automated cleaning operations on the uploaded file.
+
+### Request
+
+```http
+POST /cleaner/clean
+```
+
+### Cleaning Operations
+
+- Handle missing values
+- Remove duplicates
+- Normalize column names
+- Standardize formatting
+
+### Example Response
+
+```json
+{
+  "message": "Cleaning completed",
+  "rows_processed": 12450,
+  "duplicates_removed": 27,
+  "missing_values_fixed": 342,
+  "output_file": "cleaned_sales_data.csv"
+}
+```
+
+---
+
+## 3. Preview Cleaned Data
+
+Preview processed records without downloading the full file.
+
+### Request
+
+```http
+GET /live-update/preview?file_name=cleaned_sales_data.csv
+```
+
+### Example Response
+
+```json
+{
+  "columns": [
+    "customer_name",
+    "order_date",
+    "revenue"
+  ],
+  "preview": [
+    {
+      "customer_name": "John Smith",
+      "order_date": "2025-01-01",
+      "revenue": 100.00
+    }
+  ]
+}
+```
+
+---
+
+## 4. Download Cleaned Dataset
+
+Download the cleaned output file.
+
+### Request
+
+```http
+GET /live-update/download?file_path=cleaned_sales_data.csv
+```
+
+### Response
+
+Returns the processed CSV file.
+
+---
+
+## 5. Delete Dataset
+
+Remove uploaded files from storage.
+
+### Request
+
+```http
+DELETE /delete/target
+```
+
+### Example Response
+
+```json
+{
+  "message": "File deleted successfully"
+}
+```
+
+---
+
+# Root Endpoint
+
+### Request
+
+```http
+GET /
+```
+
+### Response
+
+Returns API metadata and available routes.
+
+```json
+{
+  "message": "Welcome to Quant Calc!",
+  "description": "Backend server for Quant Calc."
+}
+```
+
+---
+
+# Example Use Cases
+
+This API can be used for:
+
+- Business data cleanup
+- Financial reporting pipelines
+- CRM export standardization
+- Power BI preprocessing
+- Excel workflow automation
+- Data quality validation
+- Internal reporting systems
+
+---
+
+# Technology Stack
+
+## Backend
+
+- FastAPI
+- Pydantic v2
+- Python 3.13
+
+## Data Processing
+
+- pandas
+- NumPy
+
+## File Handling
+
+- pathlib
+- python-multipart
+
+## Testing
+
+- pytest
+- pytest-anyio
+- httpx
+
+---
+
+# Local Development
+
 Install dependencies:
 
-bash
-pip install -r requirements.txt
-Usage
-Run from CLI
-bash
-python src/main.py --input data/raw/sample.csv
-Output Files
-Cleaned CSV → data/cleaned/
+```bash
+uv sync
+```
 
-HTML Report → reports/report.html
+Start the server:
 
-Example Summary Statistics
-Rows Processed: 12,450
+```bash
+uvicorn app.main:app --reload
+```
 
-Columns: 18
+Open API documentation:
 
-Missing Values Fixed: 342
+```text
+http://localhost:8000/docs
+```
 
-Duplicate Rows Removed: 27
+ReDoc documentation:
 
-Skills Demonstrated
-Data cleaning with pandas
+```text
+http://localhost:8000/redoc
+```
 
-Automation scripting
+---
 
-File‑processing pipelines
+# Business Value
 
-Data validation
+Organizations frequently spend hours manually cleaning spreadsheet exports before they can be used for reporting, dashboards, or analytics.
 
-Report generation
+This API automates that process by providing a repeatable, scalable data-cleaning workflow that reduces manual effort and improves data consistency.
 
-Python project structuring
+---
 
-Business‑focused tooling
+# Author
 
-Potential Improvements
-Drag‑and‑drop web interface
+**CodeArcade**
 
-FastAPI upload endpoint
+Python Automation • Data Engineering • Backend Development
 
-Interactive charts
+Available for freelance projects involving:
 
-Excel file support
-
-AI‑generated data insights
-
-Docker deployment
-
-Why This Project Matters
-Many businesses operate with inconsistent or incomplete spreadsheet data.
-This tool automates repetitive cleanup tasks and produces easy‑to‑read reports, saving time for analysts and operations teams.
-
-It reflects real‑world freelance work commonly requested on platforms like Upwork and Fiverr.
-
-Author
-Built by CodeArcade  
-Open to freelance automation and data‑analytics projects.
+- Data cleaning
+- API development
+- Business automation
+- Reporting pipelines
+- Analytics tooling

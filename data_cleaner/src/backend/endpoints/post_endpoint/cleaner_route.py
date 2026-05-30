@@ -1,18 +1,30 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
-import os
-from typing import Any
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from pathlib import Path
+import pandas as pd
 
 from services.cleaner import SheetCleaner
+from schema.schema import CleaningRequest, Stats
 
 cleaner_router = APIRouter(prefix="/cleaner", tags=["cleaner"])
 
 # ---------------------------------------------------------
+# Dependency: base models directory
+# ---------------------------------------------------------
+def get_models_dir() -> Path:
+    return (
+        Path(__file__)
+        .resolve()
+        .parent.parent.parent  # go from endpoints/ → backend/
+        / "models"
+    )
+
+
+# ---------------------------------------------------------
 # Helper: Save uploaded file to correct directory
 # ---------------------------------------------------------
-def save_uploaded_file(uploaded_file: UploadFile):
-    file_ext = os.path.splitext(uploaded_file.filename)[1].lower()
+def save_uploaded_file(uploaded_file: UploadFile, models_dir: Path) -> Path:
+    file_ext = Path(uploaded_file.filename).suffix.lower()
 
-    # Decide folder based on extension
     if file_ext == ".csv":
         folder = "upload_csv"
     elif file_ext in [".xlsx", ".xls"]:
@@ -20,13 +32,10 @@ def save_uploaded_file(uploaded_file: UploadFile):
     else:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    endpoints_dir = os.path.dirname(base_dir)
-    backend_dir = os.path.dirname(endpoints_dir)
-    save_dir = os.path.join(backend_dir, "models", folder)
-    os.makedirs(save_dir, exist_ok=True)
+    save_dir = models_dir / folder
+    save_dir.mkdir(parents=True, exist_ok=True)
 
-    file_path = os.path.join(save_dir, uploaded_file.filename)
+    file_path = save_dir / uploaded_file.filename
 
     with open(file_path, "wb") as f:
         f.write(uploaded_file.file.read())
@@ -35,33 +44,67 @@ def save_uploaded_file(uploaded_file: UploadFile):
 
 
 # ---------------------------------------------------------
-# Upload + Clean Endpoint
+# Upload
 # ---------------------------------------------------------
 @cleaner_router.post("/upload")
-async def upload_file(fill_value: Any,
-                      columns: list,
-                      missing_strategy: str,
-                      file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    models_dir: Path = Depends(get_models_dir)
+):
     try:
-        # Save file to correct folder
-        saved_path = save_uploaded_file(file)
+        saved_path = save_uploaded_file(file, models_dir)
+        return {
+            "message": "File uploaded successfully",
+            "file_path": str(saved_path),
+            "file_name": file.filename
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-        # Run cleaner
+
+# ---------------------------------------------------------
+# Clean file
+# ---------------------------------------------------------
+@cleaner_router.post("/clean")
+async def clean_file(
+    data: CleaningRequest,
+    models_dir: Path = Depends(get_models_dir)
+):
+    try:
+        upload_path = models_dir / "upload_csv" / data.file_name
+        cleaned_path = models_dir / "save_csv" / data.file_name
+
+        # Use cleaned file if it exists
+        file_to_clean = cleaned_path if cleaned_path.exists() else upload_path
+
+        if not file_to_clean.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"File not found at {file_to_clean}"
+            )
+
         cleaner = SheetCleaner(
-            file_name=file.filename,
-            file_path=saved_path
+            file_name=data.file_name,
+            file_path=str(file_to_clean)
         )
-        stats = cleaner.run(missing_strategy=missing_strategy,
-                            columns=columns,
-                            fill_value=fill_value)
-        cleaned_path = cleaner.save_cleaned_data()
+
+        stats = cleaner.run(
+            missing_strategy=data.missing_strategy,
+            columns=data.columns,
+            fill_value=data.fill_value
+        )
+
+        new_cleaned_path = cleaner.save_cleaned_data()
 
         return {
-            "message": "File uploaded and cleaned successfully",
-            "original_file": saved_path,
-            "cleaned_file": cleaned_path,
-            "stats": stats
+            "message": "File cleaned successfully",
+            "original_file": str(file_to_clean),
+            "cleaned_file": str(new_cleaned_path),
+            "stats": Stats(**stats).model_dump()
         }
+    
+    except HTTPException:
+        raise
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

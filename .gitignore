@@ -6,6 +6,8 @@ __pycache__/
 *.pyo
 *.pyd
 
+.pytest_cache/
+
 # Virtual environment
 .venv/
 venv/
@@ -19,14 +21,8 @@ env/
 # -------------------------
 # Project Data (raw + cleaned)
 # -------------------------
-data/raw/*
-data/cleaned/*
-reports/*
-
-# Keep folder structure
-!data/raw/.gitkeep
-!data/cleaned/.gitkeep
-!reports/.gitkeep
+src/backend/models/upload_csv/
+src/backend/models/save_csv/
 
 # -------------------------
 # OS / Editor
