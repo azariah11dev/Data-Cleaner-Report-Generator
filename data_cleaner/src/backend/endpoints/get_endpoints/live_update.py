@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import pandas as pd
+import math
 
 live_update_router = APIRouter(prefix="/live-update", tags=["live-update"])
 
@@ -10,7 +11,6 @@ live_update_router = APIRouter(prefix="/live-update", tags=["live-update"])
 # Dependency: upload directory
 # ---------------------------
 def get_upload_dir() -> Path:
-    # Default directory used by the running app
     return (
         Path(__file__)
         .resolve()
@@ -18,6 +18,22 @@ def get_upload_dir() -> Path:
         / "models"
         / "upload_csv"
     )
+
+
+# ---------------------------
+# Helper: make a dict JSON-safe (replace NaN/Inf with None)
+# ---------------------------
+def make_json_safe(records: list[dict]) -> list[dict]:
+    safe = []
+    for row in records:
+        safe_row = {}
+        for k, v in row.items():
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                safe_row[k] = None
+            else:
+                safe_row[k] = v
+        safe.append(safe_row)
+    return safe
 
 
 # ---------------------------
@@ -38,7 +54,10 @@ async def preview_file(
 
     try:
         df = pd.read_csv(file_path)
-        preview = df.head(20).to_dict(orient="records")
+        raw_preview = df.head(20).to_dict(orient="records")
+
+        # Replace NaN/Inf so FastAPI can serialize to JSON
+        preview = make_json_safe(raw_preview)
 
         return {
             "columns": df.columns.tolist(),
@@ -55,16 +74,16 @@ async def preview_file(
 # ---------------------------
 @live_update_router.get("/download")
 async def download_file(file_path: str):
-    file_path = Path(file_path)
+    path = Path(file_path)
 
-    if not file_path.exists():
+    if not path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"File not found at {file_path}"
+            detail=f"File not found at {path}"
         )
 
     return FileResponse(
-        path=file_path,
+        path=path,
         media_type="text/csv",
-        filename=file_path.name
+        filename=path.name
     )

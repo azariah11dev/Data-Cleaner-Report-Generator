@@ -6,7 +6,6 @@ helper functions
 function renderPreviewTable(data) {
     const container = document.getElementById("preview-container");
 
-    // Build table header
     let tableHTML = "<table border='1' cellpadding='6' style='border-collapse: collapse;'>";
     tableHTML += "<thead><tr>";
 
@@ -15,8 +14,6 @@ function renderPreviewTable(data) {
     });
 
     tableHTML += "</tr></thead>";
-
-    // Build table body
     tableHTML += "<tbody>";
 
     data.preview.forEach(row => {
@@ -28,21 +25,17 @@ function renderPreviewTable(data) {
     });
 
     tableHTML += "</tbody></table>";
-
-    // Inject into div
     container.innerHTML = tableHTML;
 }
 
 
 function renderStats(stats) {
     const container = document.getElementById("stats-container");
-    container.innerHTML = ""; // clear previous results
+    container.innerHTML = "";
 
-    // Create wrapper
     const wrapper = document.createElement("div");
     wrapper.className = "stats-wrapper";
 
-    // Strategy + row info
     wrapper.innerHTML = `
         <h3>Cleaning Summary</h3>
         <p><strong>Strategy:</strong> ${stats.strategy}</p>
@@ -53,56 +46,32 @@ function renderStats(stats) {
         <h4>Missing Values (Before)</h4>
     `;
 
-    // Missing Before Table
     const beforeTable = document.createElement("table");
     beforeTable.className = "stats-table";
-    beforeTable.innerHTML = `
-        <tr>
-            <th>Column</th>
-            <th>Missing</th>
-        </tr>
-    `;
+    beforeTable.innerHTML = `<tr><th>Column</th><th>Missing</th></tr>`;
 
     for (const [col, val] of Object.entries(stats.missing_before)) {
-        beforeTable.innerHTML += `
-            <tr>
-                <td>${col}</td>
-                <td>${val}</td>
-            </tr>
-        `;
+        beforeTable.innerHTML += `<tr><td>${col}</td><td>${val}</td></tr>`;
     }
 
     wrapper.appendChild(beforeTable);
-
-    // Missing After Table
     wrapper.innerHTML += `<h4>Missing Values (After)</h4>`;
 
     const afterTable = document.createElement("table");
     afterTable.className = "stats-table";
-    afterTable.innerHTML = `
-        <tr>
-            <th>Column</th>
-            <th>Missing</th>
-        </tr>
-    `;
+    afterTable.innerHTML = `<tr><th>Column</th><th>Missing</th></tr>`;
 
     for (const [col, val] of Object.entries(stats.missing_after)) {
-        afterTable.innerHTML += `
-            <tr>
-                <td>${col}</td>
-                <td>${val}</td>
-            </tr>
-        `;
+        afterTable.innerHTML += `<tr><td>${col}</td><td>${val}</td></tr>`;
     }
 
     wrapper.appendChild(afterTable);
-
     container.appendChild(wrapper);
 }
 
 /*
 ==================================================================================== 
-Apply cleaning
+Upload
 ====================================================================================
 */
 document.getElementById("upload-btn").addEventListener("click", async (e) => {
@@ -110,25 +79,33 @@ document.getElementById("upload-btn").addEventListener("click", async (e) => {
     const file = document.getElementById("fileInput").files[0];
     if (!file) return alert("Select a file first");
 
-    const formData = new FormData();
-    formData.append("file", file);
+    // FIX 1: declare data in outer scope so the preview fetch can access it
+    let uploadData;
 
-    const res = await fetch("http://localhost:8000/cleaner/upload", {
-        method: "POST",
-        body: formData
-    });
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
 
-    const data = await res.json();
+        const res = await fetch("http://localhost:8000/cleaner/upload", {
+            method: "POST",
+            body: formData
+        });
 
-    // Correct keys
-    window.filePath = data.file_path;
-    window.cleanedFileName = data.file_name;
+        uploadData = await res.json();
 
-    console.log("Uploaded:", data);
+        window.filePath = uploadData.file_path;
+        window.cleanedFileName = uploadData.file_name;
+
+        console.log("Uploaded:", uploadData);
+
+    } catch (err) {
+        console.error("Error uploading file:", err);
+        return alert(`Upload failed: ${err.message}`);
+    }
 
     try {
         const previewRes = await fetch(
-            `http://localhost:8000/live-update/preview?file_name=${encodeURIComponent(data.file_name)}`
+            `http://localhost:8000/live-update/preview?file_name=${encodeURIComponent(uploadData.file_name)}`
         );
 
         const previewData = await previewRes.json();
@@ -139,7 +116,11 @@ document.getElementById("upload-btn").addEventListener("click", async (e) => {
     }
 });
 
-
+/*
+==================================================================================== 
+Apply cleaning
+====================================================================================
+*/
 document.getElementById("apply-btn").addEventListener("click", async (e) => {
     e.preventDefault();
     if (!window.filePath) {
@@ -150,9 +131,14 @@ document.getElementById("apply-btn").addEventListener("click", async (e) => {
     const columns = document.getElementById("columns").value
         .split(",")
         .map(c => c.trim())
-        .filter(c => c.length > 0);   // remove empty entries
+        .filter(c => c.length > 0);
 
-    const fill_value = document.getElementById("fill-value").value;
+    const fill_value = document.getElementById("fill-value").value.trim();
+
+    // FIX 2: validate that fill_value is provided when strategy is "constant"
+    if (missing_strategy === "constant" && fill_value === "") {
+        return alert("A fill value is required for the Constant strategy");
+    }
 
     try {
         const res = await fetch("http://localhost:8000/cleaner/clean", {
@@ -166,30 +152,49 @@ document.getElementById("apply-btn").addEventListener("click", async (e) => {
             })
         });
 
+        // FIX 3: fetch doesn't throw on 4xx/5xx — check res.ok and render error into stats-container
+        if (!res.ok) {
+            const err = await res.json();
+            const detail = err.detail || "Unknown error";
+            document.getElementById("stats-container").innerHTML =
+                `<p style="color: red;"><strong>Error:</strong> ${detail}</p>`;
+            return;
+        }
+
         const data = await res.json();
         console.log("Updated stats:", data.stats);
 
         window.cleanedFilePath = data.cleaned_file;
-
         renderStats(data.stats);
 
     } catch (err) {
         console.error("Error applying cleaning:", err);
+        document.getElementById("stats-container").innerHTML =
+            `<p style="color: red;"><strong>Error:</strong> ${err.message}</p>`;
     }
 });
 
+/*
+==================================================================================== 
+Download
+====================================================================================
+*/
 document.getElementById("downloadBtn").addEventListener("click", async (e) => {
     e.preventDefault();
     try {
-    const url = `http://localhost:8000/live-update/download?file_path=${encodeURIComponent(window.cleanedFilePath)}`
-    console.log("Downloading from:", url);
-    window.location.href = url;
+        const url = `http://localhost:8000/live-update/download?file_path=${encodeURIComponent(window.cleanedFilePath)}`;
+        console.log("Downloading from:", url);
+        window.location.href = url;
     } catch (err) {
         console.error("Error downloading file:", err);
     }
 });
 
-
+/*
+==================================================================================== 
+Delete
+====================================================================================
+*/
 document.getElementById("deleteBtn").addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -211,15 +216,14 @@ document.getElementById("deleteBtn").addEventListener("click", async (e) => {
 
         alert("Files deleted successfully");
 
-        // Reset global state
         window.filePath = null;
         window.cleanedFilePath = null;
 
-        // Optionally clear UI
         document.getElementById("stats-container").innerHTML = "";
-        document.getElementById("preview-table").innerHTML = "";
+        document.getElementById("preview-container").innerHTML = "";
 
     } catch (err) {
         console.error("Error deleting files:", err);
+        alert("Failed to delete files");
     }
 });
