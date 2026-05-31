@@ -21,8 +21,8 @@ env/
 # -------------------------
 # Project Data (raw + cleaned)
 # -------------------------
-src/backend/models/upload_csv/
-src/backend/models/save_csv/
+data_cleaner/src/backend/models/upload_csv/*
+data_cleaner/src/backend/models/save_csv/*
 
 # -------------------------
 # OS / Editor
