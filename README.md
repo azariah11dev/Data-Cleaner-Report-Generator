@@ -1,218 +1,181 @@
-# Data Cleaner & Report Generator API
+# Data Cleaner & Report Generator
 
-A FastAPI-powered backend service that automates spreadsheet cleaning, validation, and export workflows.
+A full-stack data processing application that automates spreadsheet cleaning, validation, and export workflows.
 
-Designed for analysts, operations teams, finance professionals, and businesses that regularly work with CSV or Excel data.
+Built for analysts, operations teams, finance professionals, and businesses that regularly work with CSV or Excel data.
 
----
-
-## Overview
-
-The API provides a simple workflow:
-
-1. Upload a dataset
-2. Clean and standardize the data
-3. Preview results
-4. Download the cleaned file
-
-The service is designed to eliminate repetitive spreadsheet cleanup tasks and improve data quality before reporting or analytics.
+The application combines a FastAPI backend, a lightweight frontend interface, automated testing, and data-processing pipelines to eliminate repetitive spreadsheet cleanup tasks.
 
 ---
 
-## Features
+## 🎥 Demo Video
 
-- CSV and Excel file support
+Watch the full project walkthrough here:
+
+**YouTube Demo:**  
+[Insert YouTube Link Here](https://youtube.com/)
+
+---
+
+# Project Overview
+
+Messy spreadsheets create unnecessary work before data can be used for reporting, dashboards, analytics, or decision-making.
+
+This application provides a streamlined workflow:
+
+1. Upload a CSV or Excel file
+2. Preview the original dataset
+3. Apply cleaning operations
+4. Preview the cleaned dataset
+5. Download the processed file
+6. Remove files when finished
+
+The goal is to automate repetitive data-cleaning tasks and improve data quality before analysis.
+
+---
+
+# Features
+
+## Data Processing
+
+- CSV file support
+- Excel file support (.xlsx, .xls)
 - Missing value handling
-- Duplicate removal
+- Duplicate record removal
 - Column normalization
-- Data preview endpoints
-- Cleaned file export
-- RESTful API architecture
-- FastAPI validation and error handling
+- Data validation
+- Export cleaned datasets
+
+## Cleaning Strategies
+
+Supported missing-value strategies:
+
+- Drop Rows
+- Mean
+- Median
+- Mode
+- Constant Value
+- Forward Fill
+- Backward Fill
+
+Users can apply cleaning operations globally or target specific columns.
 
 ---
 
-## Base URL
+## API Features
 
-```http
-http://localhost:8000
-```
-
----
-
-## Health Check
-
-### Request
-
-```http
-GET /health
-```
-
-### Response
-
-```json
-{
-  "status": "healthy"
-}
-```
+- File upload endpoint
+- Dataset preview endpoint
+- Automated cleaning endpoint
+- File download endpoint
+- File deletion endpoint
+- Health monitoring endpoint
+- Interactive Swagger documentation
 
 ---
 
-# API Workflow
+## Frontend Features
+
+- File upload interface
+- Original dataset preview
+- Cleaning strategy selection
+- Custom column targeting
+- Cleaned dataset preview
+- Download functionality
+- File management controls
 
 ---
 
-## 1. Upload Dataset
+# Example Workflow
 
-Upload a CSV or Excel file for processing.
+## Input Dataset
 
-### Request
+| Name | Age | Salary |
+|--------|--------|--------|
+| John | 29 | 50000 |
+| Sarah | NULL | 62000 |
+| Mike | 35 | NULL |
+
+---
+
+## Cleaning Operations
+
+- Handle missing values
+- Remove duplicates
+- Standardize formatting
+- Normalize column names
+
+---
+
+## Output Dataset
+
+| name | age | salary |
+|--------|--------|--------|
+| John | 29 | 50000 |
+| Sarah | 32 | 62000 |
+| Mike | 35 | 56000 |
+
+---
+
+# API Endpoints
+
+## Upload Dataset
 
 ```http
 POST /cleaner/upload
 ```
 
-### Example Response
-
-```json
-{
-  "message": "File uploaded successfully",
-  "file_name": "sales_data.csv"
-}
-```
+Uploads a CSV or Excel file for processing.
 
 ---
 
-## 2. Clean Dataset
-
-Run automated cleaning operations on the uploaded file.
-
-### Request
+## Clean Dataset
 
 ```http
 POST /cleaner/clean
 ```
 
-### Cleaning Operations
-
-- Handle missing values
-- Remove duplicates
-- Normalize column names
-- Standardize formatting
-
-### Example Response
-
-```json
-{
-  "message": "Cleaning completed",
-  "rows_processed": 12450,
-  "duplicates_removed": 27,
-  "missing_values_fixed": 342,
-  "output_file": "cleaned_sales_data.csv"
-}
-```
+Runs automated cleaning operations against the uploaded dataset.
 
 ---
 
-## 3. Preview Cleaned Data
-
-Preview processed records without downloading the full file.
-
-### Request
+## Preview Dataset
 
 ```http
-GET /live-update/preview?file_name=cleaned_sales_data.csv
+GET /live-update/preview?file_name=<filename>
 ```
 
-### Example Response
-
-```json
-{
-  "columns": [
-    "customer_name",
-    "order_date",
-    "revenue"
-  ],
-  "preview": [
-    {
-      "customer_name": "John Smith",
-      "order_date": "2025-01-01",
-      "revenue": 100.00
-    }
-  ]
-}
-```
+Returns a preview of the selected dataset.
 
 ---
 
-## 4. Download Cleaned Dataset
-
-Download the cleaned output file.
-
-### Request
+## Download Dataset
 
 ```http
-GET /live-update/download?file_path=cleaned_sales_data.csv
+GET /live-update/download?file_path=<file_path>
 ```
 
-### Response
-
-Returns the processed CSV file.
+Downloads the cleaned file.
 
 ---
 
-## 5. Delete Dataset
-
-Remove uploaded files from storage.
-
-### Request
+## Delete Files
 
 ```http
 DELETE /delete/target
 ```
 
-### Example Response
-
-```json
-{
-  "message": "File deleted successfully"
-}
-```
+Removes uploaded and processed files from storage.
 
 ---
 
-# Root Endpoint
-
-### Request
+## Health Check
 
 ```http
-GET /
+GET /health
 ```
 
-### Response
-
-Returns API metadata and available routes.
-
-```json
-{
-  "message": "Welcome to Quant Calc!",
-  "description": "Backend server for Quant Calc."
-}
-```
-
----
-
-# Example Use Cases
-
-This API can be used for:
-
-- Business data cleanup
-- Financial reporting pipelines
-- CRM export standardization
-- Power BI preprocessing
-- Excel workflow automation
-- Data quality validation
-- Internal reporting systems
+Returns service health status.
 
 ---
 
@@ -220,14 +183,18 @@ This API can be used for:
 
 ## Backend
 
+- Python 3.13
 - FastAPI
 - Pydantic v2
-- Python 3.13
-
-## Data Processing
-
 - pandas
 - NumPy
+
+## Frontend
+
+- Express.js
+- Vanilla JavaScript
+- HTML5
+- CSS3
 
 ## File Handling
 
@@ -239,10 +206,53 @@ This API can be used for:
 - pytest
 - pytest-anyio
 - httpx
+- Selenium
 
 ---
 
-# Local Development
+# Testing
+
+The project includes automated backend and frontend testing.
+
+### Test Coverage
+
+- API endpoint testing
+- File upload workflows
+- Data cleaning operations
+- Error handling
+- Dataset preview functionality
+- File download functionality
+- Frontend user workflows
+- End-to-end Selenium testing
+
+### Run All Tests
+
+```bash
+uv run pytest
+```
+
+### Run Backend Tests
+
+```bash
+uv run pytest tests/test_backend
+```
+
+### Run Frontend Tests
+
+```bash
+uv run pytest tests/test_frontend
+```
+
+---
+
+# Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/azariah11dev/Data-Cleaner-Report-Generator.git
+cd Data-Cleaner-Report-Generator
+```
 
 Install dependencies:
 
@@ -250,19 +260,57 @@ Install dependencies:
 uv sync
 ```
 
-Start the server:
+---
 
+# Running the Application
+
+The project includes a PowerShell launcher that starts both the backend and frontend automatically.
+
+From the project root:
 ```bash
-uvicorn app.main:app --reload
+cd data_cleaner
+```
+then:
+```bash
+.\runApp.ps1
 ```
 
-Open API documentation:
+The launcher will:
+
+- Start FastAPI (Port 8000)
+- Start Express.js (Port 3000)
+- Open the application in your browser
+- Keep both services running until terminated
+
+To stop the application:
+
+```powershell
+CTRL + C
+```
+
+---
+
+# Development
+
+## Backend
+
+Start FastAPI manually:
+navigate to:
+```bash
+ cd data_cleaner/src/backend
+ ```
+then
+```bash
+uv run main.py
+```
+
+Swagger Documentation:
 
 ```text
 http://localhost:8000/docs
 ```
 
-ReDoc documentation:
+ReDoc Documentation:
 
 ```text
 http://localhost:8000/redoc
@@ -270,17 +318,52 @@ http://localhost:8000/redoc
 
 ---
 
+## Frontend
+
+Start Express manually:
+navigate to:
+```bash
+cd data_cleaner
+```
+then:
+```bash
+node server.js
+```
+
+---
+
+# Example Use Cases
+
+This application can be used for:
+
+- Business data cleanup
+- Financial reporting workflows
+- CRM export standardization
+- Power BI preprocessing
+- Excel automation
+- Data quality validation
+- Internal analytics pipelines
+- Operations reporting
+
+---
+
 # Business Value
 
-Organizations frequently spend hours manually cleaning spreadsheet exports before they can be used for reporting, dashboards, or analytics.
+Organizations frequently spend hours manually cleaning spreadsheet exports before they can be used for dashboards, reporting, or analysis.
 
-This API automates that process by providing a repeatable, scalable data-cleaning workflow that reduces manual effort and improves data consistency.
+This application automates that process by providing a repeatable and scalable workflow that:
+
+- Improves data quality
+- Reduces manual effort
+- Standardizes datasets
+- Accelerates reporting workflows
+- Increases operational efficiency
 
 ---
 
 # Author
 
-**CodeArcade**
+## CodeArcade
 
 Python Automation • Data Engineering • Backend Development
 
@@ -291,3 +374,6 @@ Available for freelance projects involving:
 - Business automation
 - Reporting pipelines
 - Analytics tooling
+
+GitHub:
+https://github.com/azariah11dev
